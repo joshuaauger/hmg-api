@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0-rc.4 (2026-11-16)
 
 - **The Ioniq 6 on 260903 has all 351 hook points, in Canada as well as the USA.** The
   shared `hyundai/ceev/usa/260903` map (products `CEEV.CAN.` and `CEEV.USA.`) listed the 4
