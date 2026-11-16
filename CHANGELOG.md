@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Add a US Ioniq 6 (CEEV) 260903 map (343 hook points; the 8 newest wait for a Car Report
+  from 1.1.0 or newer, as for the Palisade), made on a car by crashahotrod and checked there.
+  Port of upstream commit d97743b's map files.
+- Add a Canadian Ioniq 6 (CEEV) 260903 map with 351 hook points, from a Car Report. Its
+  stock files are the same 18 as the US 260903 map's (same md5s), so its Bluetooth settings
+  points are the US map's `iO` helper: the car's own mapper picked the unrelated class `iP`
+  and found none of the 4 `btsettings.projection_helper` points. Status `probed`: it still
+  needs `engine verify-map` on a CAN 260903 car.
 - **A unit maps the points HMG-API's map lacks only because the map is older than them.**
   This happens after each HMG-API install or update (a boot step), or from Settings ("Map the
   points HMG-API's map lacks"). Only points found by name are mapped, in apps whose stock
