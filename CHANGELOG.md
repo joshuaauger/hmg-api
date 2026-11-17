@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.1.0-rc.3 (2026-11-17)
+
 - **A Debug tab, hidden until Settings > About > "Show the Debug tab" turns it on.** It
   has dumps to the USB stick ("HMG-API debug"): system info (each dumpsys service on its
   own, props, processes, mounts), logs (every logcat buffer, dmesg, tombstones, ANRs,
