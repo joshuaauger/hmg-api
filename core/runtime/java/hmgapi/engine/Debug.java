@@ -30,8 +30,8 @@ import java.util.regex.Pattern;
  *   debug scan                   leftovers: app data, APKs, native libraries and dalvik-cache
  *                                entries of packages that aren't installed, and dangling symlinks
  *   debug clean <token>          deletes what scan found (the token: scan's, so nothing new goes)
- *   debug wipe-data [ERASE [--anyway] [--no-backup]]
- *                                the whole /data partition, through recovery (a factory reset)
+ *   debug clear-data [CLEAR]     HMG-API's purge without the uninstall: every mod's changes back to
+ *                                stock, the mods removed, HMG-API's settings, logs and state cleared
  *
  * Dumps go to the first USB stick, "HMG-API debug/<time>-<what>/", never to /data and
  * never anywhere else: they're the owner's, and they hold what HMG-API itself never
@@ -65,8 +65,8 @@ final class Debug {
             if (args.length < 3) { e.out.add("usage: debug clean <token from debug scan>"); return 2; }
             return scan(e, args[2]);
         }
-        if ("wipe-data".equals(what)) return wipeData(e, args);
-        e.out.add("usage: debug dump-sys | dump-logs [<seconds>] | dump-apks | scan | clean <token> | wipe-data [ERASE [--anyway] [--no-backup]]");
+        if ("clear-data".equals(what)) return clearData(e, args);
+        e.out.add("usage: debug dump-sys | dump-logs [<seconds>] | dump-apks | scan | clean <token> | clear-data [CLEAR]");
         return 2;
     }
 
@@ -579,77 +579,63 @@ final class Debug {
         }
     }
 
-    // ---- wipe-data
+    // ---- clear-data
 
-    /** the recovery partition (by-name), which does the wipe; null if none is found */
-    static String recovery(Engine e) {
-        File plat = new File(e.root + "/dev/block/platform");
-        File[] ps = plat.listFiles();
-        if (ps != null) {
-            for (File p : ps) {
-                File r = new File(p, "by-name/recovery");
-                if (r.exists()) return shown(e, r);
-            }
-        }
-        File r = new File(e.root + "/dev/block/by-name/recovery");
-        return r.exists() ? shown(e, r) : null;
-    }
+    /** under /data/hmgapi: what clear-data deletes (HMG-API's install, stock backups and maps stay) */
+    static final String[] CLEARED = { "settings", "logs", "public/reports", "inbox", "state/probes", "state/local-map.json",
+        "state/map-check.json", "state/map-probe.json", "state/micom-watch.txt", "hmgapid.log", "boot.log", "recover.log",
+        "binds.log", "nemesis-sync.log", "map-local.log" };
 
-    static boolean hmgapiInstalled(Engine e) {
-        String[] s = new File(e.data, "stock").list();
-        return new File(e.root + "/system/bin/hmgapid").exists() || s != null && s.length > 0;
-    }
-
-    static int wipeData(Engine e, String[] args) throws Exception {
-        boolean erase = false, anyway = false, noBackup = false;
-        for (int i = 2; i < args.length; i++) {
-            if ("ERASE".equals(args[i])) erase = true;
-            else if ("--anyway".equals(args[i])) anyway = true;
-            else if ("--no-backup".equals(args[i])) noBackup = true;
-        }
-        String rec = recovery(e);
-        boolean installed = hmgapiInstalled(e);
-        boolean nemesis = new File(e.root + "/data/nemesis").isDirectory();
-        List<File> s = sticks(e);
-        e.out.add("recovery: " + (rec != null ? rec : "not found"));
-        e.out.add("hmgapi: " + (installed ? "installed (its stock backups are on /data: the wipe loses them)" : "not installed"));
-        e.out.add("nemesis: " + (nemesis ? "installed (its packages' backups are on /data too)" : "not found"));
-        e.out.add("usb: " + (s.isEmpty() ? "none" : shown(e, s.get(0))));
-        e.out.add("loses: every app's data and settings, paired phones, Wi-Fi and hotspot settings, saved places, "
-                + "HMG-API's mods and settings, NEMESIS's packages' state");
-        e.out.add("keeps: /system as it is now (HMG-API's and mods' changes to it included)");
-        if (!erase) {
-            e.out.add("advice: for a stock unit, uninstall HMG-API (and NEMESIS) first, then wipe");
-            e.out.add("confirm: debug wipe-data ERASE" + (installed || rec == null ? " --anyway" : ""));
+    static int clearData(Engine e, String[] args) throws Exception {
+        boolean go = args.length > 2 && "CLEAR".equals(args[2]);
+        String[] mods = new File(e.data, "mods").list();
+        if (mods == null) mods = new String[0];
+        Arrays.sort(mods);
+        int found = 0;
+        for (String c : CLEARED) if (new File(e.data, c).exists()) found++;
+        e.out.add("mods: " + mods.length + (mods.length > 0 ? " (" + join(mods) + "): their changes back to stock, then removed "
+                + "with their apps and NEMESIS packages" : ""));
+        e.out.add("clears: HMG-API's settings (the owner's switches included), logs, Car Reports, this car's own map points (" + found
+                + " of " + CLEARED.length + " there)");
+        e.out.add("keeps: HMG-API itself, its stock backups and its maps (uninstall with PURGE to remove those too)");
+        if (!go) {
+            e.out.add("confirm: debug clear-data CLEAR");
             return 0;
         }
-        if (rec == null && !anyway) {
-            e.out.add("refused: no recovery partition found, so nothing may do the wipe (add --anyway to try)");
-            return 3;
+        if (e.journalFile.exists()) {
+            e.out.add("refused: an earlier apply isn't finished or is a trial: `engine keep` or `engine recover` first");
+            return 1;
         }
-        if (installed && !anyway) {
-            e.out.add("refused: HMG-API is installed and its stock backups would go with /data, so it couldn't put the "
-                    + "unit back to stock afterwards. Uninstall it first, or add --anyway (they're copied to the USB stick first)");
-            return 3;
+        // 1. every file and setting the mods changed back to stock, while the record of them is still there
+        Engine r = new Engine();
+        int rc = r.run(new String[] { "restore" });
+        for (String l : r.out) e.out.add("restore: " + l);
+        if (rc != 0) {
+            e.out.add("stopped: the restore didn't finish, so nothing was removed");
+            return rc;
         }
-        if ((installed || nemesis) && !noBackup) {
-            if (s.isEmpty()) {
-                e.out.add("refused: plug in a USB stick for the backups first (or add --no-backup)");
-                return 3;
+        // 2. the mods (their dalvik-cache with them), then NEMESIS's list and the mods' apps follow
+        for (String id : mods) {
+            File d = new File(e.data, "mods/" + id);
+            if (!d.isDirectory()) continue;
+            if (id.matches("[a-z0-9][a-z0-9-]{0,63}")) Packages.remove(e, id);
+            else Engine.rm(d);
+        }
+        // 3. HMG-API's own data
+        int n = 0;
+        for (String c : CLEARED) {
+            File f = new File(e.data, c);
+            if (f.exists() || isLink(f)) {
+                Engine.rm(f);
+                n++;
             }
-            File d = folder(e, "before-wipe");
-            if (d == null) return 1;
-            int n = copyTree(new File(e.data, "stock"), new File(d, "data_hmgapi_stock"), null)
-                    + copyTree(new File(e.root + "/data/nemesis/backup"), new File(d, "data_nemesis_backup"), null);
-            Engine.write(new File(d, "README.txt"), README + "\nThe stock files HMG-API and NEMESIS packages kept to undo their "
-                    + "changes, saved before a /data wipe. Put back by hand: data_hmgapi_stock is /data/hmgapi/stock.\n");
-            e.out.add("backed up: " + n + " file(s) to " + shown(e, d));
         }
-        File cmd = new File(e.root + "/cache/recovery/command");
-        Engine.write(cmd, "--wipe_data\n");
-        new File(e.root + "/cache/recovery/log").delete();
-        e.out.add("wiping: the head unit restarts into recovery, erases /data and starts again (the first start takes several minutes)");
-        e.rebootTo = "recovery";
+        e.hmgapi = new LinkedHashMap<String, Object>();
+        LiveState.publish(e);   // no services, readings or network asks left: hmgapid stops them
+        NemesisSync.run(e);     // the mods' NEMESIS packages unlisted
+        ModApps.sync(e);        // the mods' apps uninstalled (or once Android is up)
+        e.out.add("cleared: " + mods.length + " mod(s) removed, " + n + " of HMG-API's data folder(s) and file(s) deleted");
+        e.out.add("restart the head unit to finish");
         return 0;
     }
 }

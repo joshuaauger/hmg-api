@@ -289,7 +289,7 @@ final class SettingsTab {
         Ui.line(page);
         Ui.text(page, "Debug", 21, true, Ui.TEXT);
         Ui.text(page, "Tools for looking into the head unit: dumps to a USB stick, leftover app data, the MICOM recorder, "
-                + "erasing /data. For when something misbehaves.", 16, false, Ui.GREY);
+                + "clearing HMG-API's data. For when something misbehaves.", 16, false, Ui.GREY);
         Switch sw = Ui.switchRow(page, "Show the Debug tab");
         sw.setChecked(a.debugShown());
         sw.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {

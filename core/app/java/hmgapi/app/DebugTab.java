@@ -93,14 +93,14 @@ final class DebugTab {
         add(Ui.button(mi, "Status", click("", 60000, "micom-watch")));
         Ui.line(list);
 
-        Ui.text(list, "Erase /data (factory reset)", 21, true, Ui.ERROR);
-        Ui.text(list, "Restarts into recovery, which erases every app's data and settings, paired phones, HMG-API's mods and "
-                + "NEMESIS's state. /system stays as it is, HMG-API's changes included, and HMG-API's stock backups are on /data: "
-                + "uninstall HMG-API first for a stock unit. Not tried on a car yet.", 16, false, Ui.GREY);
-        add(Ui.button(list, "Erase /data…", new View.OnClickListener() {
+        Ui.text(list, "Clear HMG-API's data", 21, true, Ui.ERROR);
+        Ui.text(list, "Like uninstalling with PURGE, but HMG-API stays installed: every mod's changes go back to stock, then "
+                + "every mod is removed with its app and NEMESIS package, and HMG-API's settings, logs, Car Reports and this "
+                + "car's own map points are deleted. HMG-API's stock backups and maps stay. A restart finishes it.", 16, false, Ui.GREY);
+        add(Ui.button(list, "Clear data…", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                wipeCheck();
+                clearCheck();
             }
         }));
         return root;
@@ -191,47 +191,47 @@ final class DebugTab {
                 }).show();
     }
 
-    // ---- wipe
+    // ---- clear data
 
-    private void wipeCheck() {
-        run("Checking…", 60000, new String[] { "engine", "debug", "wipe-data" }, new After() {
+    private void clearCheck() {
+        run("Checking…", 60000, new String[] { "engine", "debug", "clear-data" }, new After() {
             @Override
             public void done(Hmgapid.Result r) {
                 if (r.code != 0) return;
-                boolean anyway = false;
                 StringBuilder m = new StringBuilder();
                 for (String l : r.output.split("\n")) {
-                    if (l.startsWith("confirm: ")) anyway = l.contains("--anyway");
-                    else m.append(l.replaceFirst("^([a-z]+): ", "$1:  ")).append("\n\n");
+                    if (!l.startsWith("confirm: ")) m.append(l.replaceFirst("^([a-z]+): ", "$1:  ")).append("\n\n");
                 }
-                confirmWipe(m.toString().trim(), anyway);
+                confirmClear(m.toString().trim());
             }
         });
     }
 
-    private void confirmWipe(String facts, final boolean anyway) {
+    private void confirmClear(String facts) {
         final EditText typed = new EditText(a);
         typed.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
-        typed.setHint("ERASE");
+        typed.setHint("CLEAR");
         LinearLayout box = Ui.column(a);
         int p = Ui.dp(a, 24);
         box.setPadding(p, p / 2, p, 0);
-        Ui.text(box, facts + (anyway ? "\n\nHMG-API is installed or no recovery was found: going on anyway. HMG-API's and NEMESIS's "
-                + "backups are copied to the USB stick first (one must be plugged in)." : "")
-                + "\n\nType ERASE to go on.", 17, false, Ui.TEXT);
+        Ui.text(box, facts + "\n\nThis can't be undone: the mods have to be installed again. Type CLEAR to go on.", 17, false, Ui.TEXT);
         box.addView(typed);
-        new AlertDialog.Builder(a).setTitle("Erase /data?").setView(box)
+        new AlertDialog.Builder(a).setTitle("Clear HMG-API's data?").setView(box)
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton("Erase and restart", new DialogInterface.OnClickListener() {
+                .setPositiveButton("Clear", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface d, int which) {
-                        if (!"ERASE".equals(typed.getText().toString().trim())) {
-                            status.setText("Not erased: ERASE wasn't typed.");
+                        if (!"CLEAR".equals(typed.getText().toString().trim())) {
+                            status.setText("Not cleared: CLEAR wasn't typed.");
                             return;
                         }
-                        String[] op = anyway ? new String[] { "engine", "debug", "wipe-data", "ERASE", "--anyway" }
-                                : new String[] { "engine", "debug", "wipe-data", "ERASE" };
-                        run("Saving backups and restarting into recovery…", 600000, op, null);
+                        run("Putting the mods' changes back to stock and clearing (a few minutes; leave the head unit on)…", 900000,
+                                new String[] { "engine", "debug", "clear-data", "CLEAR" }, new After() {
+                                    @Override
+                                    public void done(Hmgapid.Result r) {
+                                        if (r.code == 0) a.needRestart();
+                                    }
+                                });
                     }
                 }).show();
     }

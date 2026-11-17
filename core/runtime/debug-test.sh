@@ -109,24 +109,42 @@ eng scan
 check "no package list: refused" 1 $rc
 mv $R/data/system/packages.xml.x $R/data/system/packages.xml
 
-# ---- wipe-data
-eng wipe-data
-check "wipe-data alone only explains" 0 $rc
-check "no command written" no $([ -e $R/cache/recovery/command ] && echo yes || echo no)
-has "says HMG-API's backups go with it" "its stock backups are on /data" "$out"
-eng wipe-data ERASE
-check "no recovery: refused" 3 $rc
-mkdir -p $R/dev/block/platform/bdm/by-name; : > $R/dev/block/platform/bdm/by-name/recovery
-eng wipe-data ERASE
-check "HMG-API installed: refused" 3 $rc
-has "with the way out" "Uninstall it first" "$out"
-check "still no command" no $([ -e $R/cache/recovery/command ] && echo yes || echo no)
-rm -rf $U; eng wipe-data ERASE --anyway
-check "anyway, but no stick for the backups: refused" 3 $rc
-mkdir -p $U; eng wipe-data ERASE --anyway
-check "anyway, with a stick" 0 $rc
-check "recovery told to wipe" "--wipe_data" "$(cat $R/cache/recovery/command)"
-check "stock backups on the stick first" stockbytes "$(cat "$(ls -d "$U/HMG-API debug/"*-before-wipe)/data_hmgapi_stock/app_process")"
-has "restart into recovery after the output" "reboot recovery" "$(cat $R/actions.log)"
+# ---- clear-data: HMG-API's purge, HMG-API staying installed
+printf 'ro.build.product=CVEV.USA.0000.V015\npersist.ium.support=none\n' > $R/system/build.prop
+STOCK_PROP=$(md5sum $R/system/build.prop | cut -d' ' -f1)
+m=$R/data/hmgapi/mods/moda; mkdir -p $m
+printf '{"id": "moda", "version": "1.0.0"}\n' > $m/mod.json
+printf '{"cars": {"CVEV.USA.": "ev6"}, "changes": [{"type": "props", "path": "/system/build.prop", "set": {"persist.ium.support": "carplay"}, "stock": "any"}]}\n' > $m/patches.json
+mkdir -p $R/data/hmgapi/settings/allow $R/data/hmgapi/public/reports $R/data/hmgapi/maps $R/data/hmgapi/hook
+echo '{"x": 1}' > $R/data/hmgapi/settings/moda.json; : > $R/data/hmgapi/settings/allow/ota_updates
+echo '{}' > $R/data/hmgapi/public/reports/car-report.json; echo '{}' > $R/data/hmgapi/state/local-map.json
+echo map > $R/data/hmgapi/maps/m.json; : > $R/data/hmgapi/hook/enable; echo boot > $R/data/hmgapi/boot.sh
+eng0() { set +e; out=$(HMGAPI_ROOT=$R HMGAPI_HOST=1 HMGAPI_TEST_ANY_CAR=1 HMGAPI_PRODUCT=CVEV.USA.0000.V015 HMGAPI_ONEBIN=cvev_us \
+        HMGAPI_USB_DIRS=$U java -cp "$CP" hmgapi.engine.Engine "$@" 2>&1); rc=$?; set -e; }
+eng0 apply
+check "the mod applies" 0 $rc
+has "and changes build.prop" "persist.ium.support=carplay" "$(cat $R/system/build.prop)"
+eng clear-data
+check "clear-data alone only explains" 0 $rc
+has "names the mods" "mods: 1 (moda)" "$out"
+check "nothing removed yet" yes $([ -d $m ] && [ -f $R/data/hmgapi/settings/moda.json ] && echo yes || echo no)
+: > $R/data/hmgapi/state/journal.json
+eng clear-data CLEAR
+check "an unfinished apply: refused" 1 $rc
+rm $R/data/hmgapi/state/journal.json
+eng0 debug clear-data CLEAR
+check "clear-data CLEAR" 0 $rc
+check "build.prop back to stock" "$STOCK_PROP" "$(md5sum $R/system/build.prop | cut -d' ' -f1)"
+check "mod removed" no $([ -e $m ] && echo yes || echo no)
+check "settings cleared" no $([ -e $R/data/hmgapi/settings ] && echo yes || echo no)
+check "reports cleared" no $([ -e $R/data/hmgapi/public/reports ] && echo yes || echo no)
+check "local map points cleared" no $([ -e $R/data/hmgapi/state/local-map.json ] && echo yes || echo no)
+check "logs cleared" no $([ -e $R/data/hmgapi/hmgapid.log ] || [ -e $R/data/hmgapi/logs ] && echo yes || echo no)
+check "stock backups kept" stockbytes "$(cat $R/data/hmgapi/stock/app_process)"
+check "maps, hook switch and boot steps kept" yes $([ -f $R/data/hmgapi/maps/m.json ] && [ -f $R/data/hmgapi/hook/enable ] && [ -f $R/data/hmgapi/boot.sh ] && echo yes || echo no)
+has "says to restart" "restart the head unit" "$out"
+eng0 plan
+check "afterwards a plan has nothing to do" 0 $rc
+hasnt "and no mod left" "moda" "$out"
 
 exit $fail

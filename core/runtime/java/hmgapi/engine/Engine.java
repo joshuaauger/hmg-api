@@ -174,15 +174,7 @@ public final class Engine {
         return b.toString().replaceAll("; $", "");
     }
 
-    /** a restart after the result is printed: "recovery" (debug wipe-data) */
-    String rebootTo;
-
     void runAfter() throws Exception {
-        if (rebootTo != null) {
-            if (host) hostAction("reboot " + rebootTo);
-            else exec("/system/bin/reboot", rebootTo);
-            return;
-        }
         if (bindsChanged) {
             if (host) hostAction("binds");
             else {

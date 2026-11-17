@@ -12,8 +12,8 @@ app could already use. Over adb they're the same: `hmgapid engine debug <what>`.
 | `debug dump-apks` | `/system/app`, `priv-app`, `framework`, `vendor/app` and `/data/app` (`.apk`, `.odex`, `.jar`), with `md5s.txt`; it checks the stick has room first |
 | `debug scan` | prints leftovers as `<kind> remove|keep <bytes> <path> -- <why>`, then `summary:` and `token:` |
 | `debug clean <token>` | scans again and removes the `remove` lines, only if the token still matches (else code 3) |
-| `debug wipe-data` | says what a wipe would lose and keep, and what it needs |
-| `debug wipe-data ERASE [--anyway] [--no-backup]` | writes `--wipe_data` to `/cache/recovery/command`, then `reboot recovery` once the output is printed |
+| `debug clear-data` | says which mods would go and what's cleared and kept |
+| `debug clear-data CLEAR` | `engine restore`, removes every mod, deletes HMG-API's data (below); restart after |
 
 **Dumps** go to the first USB stick, `HMG-API debug/<yyyyMMdd-HHmmss>-<what>/`, never to /data.
 Without a stick, a dump does nothing. This was the owner's choice: the dumps aren't
@@ -41,15 +41,24 @@ finds, and what clean may remove:
 `/data/hmgapi`, `/data/nemesis`, `/data/system`, `/data/property` and `/data/media` are never
 walked or removed. Links are removed themselves, never what they point at.
 
-**Erase /data.** HMG-API's stock backups (`/data/hmgapi/stock`) and NEMESIS packages' backups
-(`/data/nemesis/backup`) are on /data, and /system stays as it is. So after a wipe, HMG-API
-can't put the unit back to stock. The advice is to uninstall HMG-API (and NEMESIS) first. With
-HMG-API installed, or no `by-name/recovery` partition found, `ERASE` alone is refused (code 3).
-`--anyway` goes on, but first copies both backup folders to the stick
-(`<time>-before-wipe/`), so it needs a stick unless `--no-backup` is given. The app asks for
-the word ERASE to be typed, and adds `--anyway` when the check asks for it. It never uses
-`--no-backup`. **Not tried on a car**: whether the Gen5W recovery honours `--wipe_data` is
-unknown.
+**Clear data** is the uninstaller's `--purge` (USB: `UNINSTALL-PURGE`) with HMG-API staying
+installed. The steps, in this order:
+
+1. `engine restore` puts every file and setting the mods changed back to stock, while the
+   record of them is still there. If it doesn't finish, nothing is removed. An unfinished
+   or trial apply refuses, as `engine install` does.
+2. Every mod is removed (`engine remove`, its dalvik-cache with it).
+3. `settings/` (the owner's switches and `hmgapi.json` too), `logs/`, `public/reports`,
+   `inbox`, `state/probes`, `state/local-map.json`, `state/map-check.json`,
+   `state/map-probe.json`, `state/micom-watch.txt` and the top-level logs (`hmgapid.log`,
+   `boot.log` ...) are deleted.
+4. The live state is published again, so hmgapid stops the mods' services and HMG-API's
+   keepers. NEMESIS's list drops the mods' packages, and the mods' apps are uninstalled
+   (`engine apps`, again once Android is up if it isn't).
+
+Kept: HMG-API's install (`/system` files, the app, `hook/`, `boot.sh` and the other steps,
+`install.log`), `stock/` (needed to uninstall), `maps/` and the state of what HMG-API owns.
+A restart finishes it. The app asks for CLEAR to be typed.
 
 Tested off the car (`core/runtime/debug-test.sh`: a fake unit with orphans, links and a
 stick); on no car yet.

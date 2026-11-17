@@ -11,10 +11,11 @@
   dalvik-cache entries of packages that aren't installed, and symlinks to nothing. Its
   cleanup removes only what no installed package owns, worked out from `packages.xml`, and
   needs the scan's token. It never touches HMG-API's, NEMESIS's or the system's folders.
-  The tab also starts and stops the MICOM recorder and shows its recording. "Erase /data"
-  is a factory reset through recovery. It refuses while HMG-API is installed (its stock
-  backups are on /data) or when no recovery partition is found, unless the owner goes on
-  anyway, and then copies HMG-API's and NEMESIS's backups to the stick first. Engine
+  The tab also starts and stops the MICOM recorder and shows its recording. "Clear data"
+  is the uninstaller's PURGE with HMG-API staying installed: every mod's changes go back
+  to stock, the mods are removed with their apps and NEMESIS packages, and HMG-API's
+  settings, logs, Car Reports and the car's own map points are deleted. The stock backups,
+  maps and HMG-API's own files stay. Engine
   side: `engine debug` (`docs/debug.md`). Tested off the car only (`core/runtime/debug-test.sh`).
 
 - **A unit maps the points HMG-API's map lacks only because the map is older than them.**
