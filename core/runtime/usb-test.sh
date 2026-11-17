@@ -77,4 +77,20 @@ sig sign $T/m/other $T/author.key > /dev/null; (cd $T/m && zip -q -r -X $U/HMGAP
 eng usb-scan; check "another head unit's mod refused" refused "$(st other-1.0.0.zip)"
 check "... with what installing it anyway would do" new "$(printf '%s' "$out" | python3 -c "import json,sys; d=json.load(sys.stdin); print([p.get('any_car') for p in d['packages'] if p['file'].endswith('/other-1.0.0.zip')][0])")"
 check "a refusal that isn't about the car: no Install anyway" None "$(printf '%s' "$out" | python3 -c "import json,sys; d=json.load(sys.stdin); print([p.get('any_car') for p in d['packages'] if p['file'].endswith('/gamma-1.0.0.zip') or p['file'].endswith('/hmgapi-fake.zip')][-1])")"
+
+# engine libs: the CarPlay / Android Auto libraries to the stick, for debugging
+mkdir -p $R/system/lib $R/data/hmgapi/stock/system/lib
+printf 'core' > $R/system/lib/libCarPlayCore.so; printf 'iap2' > $R/system/lib/libiap2session.so
+printf 'aa' > $R/system/lib/libautoreceiver_infobank.so; printf 'libc' > $R/system/lib/libc.so; printf 'text' > $R/system/lib/libCarPlay.txt
+printf 'stock core' > $R/data/hmgapi/stock/system/lib/libCarPlayCore.so
+eng libs; check "libs: no stick is an error" 1 $rc
+has "... that says so" "no USB stick found" "$out"
+mkdir -p $R/storage/usb0
+eng libs; check "libs: copies to the stick" 0 $rc
+D=$(ls -d $R/storage/usb0/"HMG-API libs"/*)
+check "libs: the CarPlay, iAP2 and Android Auto libraries" "libCarPlayCore.so libautoreceiver_infobank.so libiap2session.so manifest.txt stock" "$(LC_ALL=C ls "$D" | paste -sd' ' -)"
+check "libs: bytes as on the unit" core "$(cat "$D"/libCarPlayCore.so)"
+check "libs: the stock backup, where there is one" "libCarPlayCore.so" "$(ls "$D"/stock)"
+has "libs: manifest lists a file's md5" "$(python3 -c "import hashlib,sys; print(hashlib.md5(open(sys.argv[1],'rb').read()).hexdigest())" $R/system/lib/libiap2session.so)  4  libiap2session.so" "$(cat "$D"/manifest.txt)"
+check "libs: an unrelated library isn't copied" no "$([ -e "$D"/libc.so ] && echo yes || echo no)"
 exit $fail

@@ -23,7 +23,8 @@ final class UsbUpdates {
     private UsbUpdates() {}
 
     /** HMG-API's release key: only releases signed with it update HMG-API. */
-    static final String RELEASE_UUID = "7c8adfcb-bf60-88ac-9389-62e9d43728e1";
+    // joshuaauger/hmg-api fork: its own release key (upstream's is 7c8adfcb-bf60-88ac-9389-62e9d43728e1)
+    static final String RELEASE_UUID = "e8b7a065-0075-83f7-97d2-c7f438465240";
     static final String[] MOUNTS = { "/storage/usb0", "/storage/usb1", "/storage/usb2",
         "/mnt/media_rw/usb0", "/mnt/media_rw/usb1", "/mnt/media_rw/usb2" };
 
