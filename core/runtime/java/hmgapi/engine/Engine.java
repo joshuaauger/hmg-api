@@ -174,7 +174,15 @@ public final class Engine {
         return b.toString().replaceAll("; $", "");
     }
 
+    /** a restart after the result is printed: "recovery" (debug wipe-data) */
+    String rebootTo;
+
     void runAfter() throws Exception {
+        if (rebootTo != null) {
+            if (host) hostAction("reboot " + rebootTo);
+            else exec("/system/bin/reboot", rebootTo);
+            return;
+        }
         if (bindsChanged) {
             if (host) hostAction("binds");
             else {
@@ -262,6 +270,7 @@ public final class Engine {
         if ("usb-scan".equals(cmd)) return UsbUpdates.scan(this);
         if ("publish-state".equals(cmd)) return LiveState.publish(this);
         if ("apps".equals(cmd)) return ModApps.sync(this);
+        if ("debug".equals(cmd)) return Debug.run(this, args);
         if ("probe".equals(cmd)) {   // a mod's install-time probe again (its answer is kept until then)
             if (args.length < 2 || !args[1].matches("[a-z0-9][a-z0-9-]*")) { out.add("usage: probe <mod id>"); return 2; }
             new File(stateDir, "probes/" + args[1] + ".json").delete();

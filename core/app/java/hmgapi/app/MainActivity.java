@@ -21,14 +21,16 @@ import org.json.JSONObject;
  * HMG-API's app: a top bar (what HMG-API is doing on this car: hooks, changes not
  * applied yet, a restart needed; Apply changes, USB updates, Restart) over four
  * tabs: Mods (each mod's state, switch, settings and log), Settings (HMG-API's own,
- * by category), Car Report, Logs.
+ * by category), Car Report, Logs, and Debug once Settings > About shows it.
  */
 public class MainActivity extends Activity {
     static final String[] TABS = { "Mods", "Settings", "Car Report", "Logs" };
-    private LinearLayout pills;
+    static final String DEBUG = "Debug";
+    private LinearLayout pills, tabRow;
     private FrameLayout content;
-    private final TextView[] tabs = new TextView[TABS.length];
-    private final View[] marks = new View[TABS.length];
+    private String[] names = TABS;
+    private TextView[] tabs;
+    private View[] marks;
     private int current;
     private boolean pendingChanges;
 
@@ -75,19 +77,53 @@ public class MainActivity extends Activity {
         root.addView(top);
 
         // tabs
-        LinearLayout tabRow = Ui.row(this);
+        tabRow = Ui.row(this);
         tabRow.setPadding(Ui.dp(this, 20), Ui.dp(this, 8), Ui.dp(this, 20), 0);
-        for (int i = 0; i < TABS.length; i++) {
+        drawTabs();
+        root.addView(tabRow);
+        View rule = new View(this);
+        rule.setBackgroundColor(Ui.LINE);
+        root.addView(rule, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1));
+        content = new FrameLayout(this);
+        root.addView(content, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
+        setContentView(root);
+        show(Math.min(getIntent().getIntExtra("tab", 0), names.length - 1));
+    }
+
+    /** Is the Debug tab on (Settings > About)? */
+    boolean debugShown() {
+        return getSharedPreferences("hmgapi", MODE_PRIVATE).getBoolean("show_debug", false);
+    }
+
+    /** Debug on or off: the tab row again, staying on the tab shown */
+    void setDebugShown(boolean on) {
+        getSharedPreferences("hmgapi", MODE_PRIVATE).edit().putBoolean("show_debug", on).apply();
+        drawTabs();
+        show(Math.min(current, names.length - 1));
+    }
+
+    private void drawTabs() {
+        tabRow.removeAllViews();
+        if (debugShown()) {
+            names = new String[TABS.length + 1];
+            System.arraycopy(TABS, 0, names, 0, TABS.length);
+            names[TABS.length] = DEBUG;
+        } else {
+            names = TABS;
+        }
+        tabs = new TextView[names.length];
+        marks = new View[names.length];
+        for (int i = 0; i < names.length; i++) {
             final int n = i;
             LinearLayout t = Ui.column(this);
             tabs[i] = new TextView(this);
-            tabs[i].setText(TABS[i]);
+            tabs[i].setText(names[i]);
             Ui.size(tabs[i], 21);
             tabs[i].setPadding(Ui.dp(this, 4), Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 8));
             t.addView(tabs[i]);
             marks[i] = new View(this);
             marks[i].setBackground(Ui.box(this, Ui.ACCENT, 0, 2));
-            int w = (int) tabs[i].getPaint().measureText(TABS[i]) + Ui.dp(this, 8);   // the underline: as wide as its name
+            int w = (int) tabs[i].getPaint().measureText(names[i]) + Ui.dp(this, 8);   // the underline: as wide as its name
             t.addView(marks[i], new LinearLayout.LayoutParams(w, Ui.dp(this, 4)));
             t.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -100,14 +136,6 @@ public class MainActivity extends Activity {
             lp.rightMargin = Ui.dp(this, 44);
             tabRow.addView(t, lp);
         }
-        root.addView(tabRow);
-        View rule = new View(this);
-        rule.setBackgroundColor(Ui.LINE);
-        root.addView(rule, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1));
-        content = new FrameLayout(this);
-        root.addView(content, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
-        setContentView(root);
-        show(getIntent().getIntExtra("tab", 0));
     }
 
     @Override
@@ -118,14 +146,14 @@ public class MainActivity extends Activity {
 
     void show(int n) {
         current = n;
-        for (int i = 0; i < TABS.length; i++) {
+        for (int i = 0; i < names.length; i++) {
             tabs[i].setTextColor(i == n ? Ui.TEXT : Ui.GREY);
             tabs[i].setTypeface(i == n ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
             marks[i].setVisibility(i == n ? View.VISIBLE : View.INVISIBLE);
         }
         content.removeAllViews();
         View v = n == 0 ? new ModsTab(this).view() : n == 1 ? new SettingsTab(this).view()
-                : n == 2 ? new ReportTab(this).view() : new LogsTab(this).view();
+                : n == 2 ? new ReportTab(this).view() : n == 3 ? new LogsTab(this).view() : new DebugTab(this).view();
         content.addView(v);
     }
 

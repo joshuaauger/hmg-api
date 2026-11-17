@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **A Debug tab, hidden until Settings > About > "Show the Debug tab" turns it on.** It
+  has dumps to the USB stick ("HMG-API debug"): system info (each dumpsys service on its
+  own, props, processes, mounts), logs (every logcat buffer, dmesg, tombstones, ANRs,
+  HMG-API's and NEMESIS's logs, with an optional 60 s live recording), and apps (the
+  system, framework and installed APKs, with md5s). Each dump folder has a README saying
+  it can hold personal data. A leftovers scan finds the data, APKs, native libraries and
+  dalvik-cache entries of packages that aren't installed, and symlinks to nothing. Its
+  cleanup removes only what no installed package owns, worked out from `packages.xml`, and
+  needs the scan's token. It never touches HMG-API's, NEMESIS's or the system's folders.
+  The tab also starts and stops the MICOM recorder and shows its recording. "Erase /data"
+  is a factory reset through recovery. It refuses while HMG-API is installed (its stock
+  backups are on /data) or when no recovery partition is found, unless the owner goes on
+  anyway, and then copies HMG-API's and NEMESIS's backups to the stick first. Engine
+  side: `engine debug` (`docs/debug.md`). Tested off the car only (`core/runtime/debug-test.sh`).
+
 - **A unit maps the points HMG-API's map lacks only because the map is older than them.**
   This happens after each HMG-API install or update (a boot step), or from Settings ("Map the
   points HMG-API's map lacks"). Only points found by name are mapped, in apps whose stock

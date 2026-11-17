@@ -635,9 +635,10 @@ static int op_engine(int fd, int argc, char **argv)
     if (!(seq(sub, "plan") || seq(sub, "apply") || seq(sub, "keep") || seq(sub, "restore") || seq(sub, "status")
           || seq(sub, "recover") || seq(sub, "install") || seq(sub, "remove") || seq(sub, "map") || seq(sub, "verify-map")
           || seq(sub, "usb-scan") || seq(sub, "update-hmgapi") || seq(sub, "apps") || seq(sub, "probe")
-          || seq(sub, "map-car") || seq(sub, "report") || seq(sub, "nemesis-sync"))) {
+          || seq(sub, "map-car") || seq(sub, "report") || seq(sub, "nemesis-sync") || seq(sub, "debug"))) {
         say(fd, "usage: engine plan | apply [--trial] [--force] | keep | restore | status | recover | install <zip> | remove <id>"
-                " | nemesis-sync | map | map-car [--local | --write | --forget] | verify-map | report [--usb]\n");
+                " | nemesis-sync | map | map-car [--local | --write | --forget] | verify-map | report [--usb]"
+                " | debug dump-sys | dump-logs [<secs>] | dump-apks | scan | clean <token> | wipe-data [ERASE [--anyway] [--no-backup]]\n");
         return 2;
     }
     a[n++] = APP_PROCESS;

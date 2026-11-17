@@ -286,6 +286,18 @@ final class SettingsTab {
         fact("Support the project", "github.com/Open-HMG/HMG-API/wiki/Support");
         Ui.text(page, "HMG-API installs through NEMESIS, adb or a USB stick, and every change it makes to the head unit can be "
                 + "put back to stock.", 16, false, Ui.GREY);
+        Ui.line(page);
+        Ui.text(page, "Debug", 21, true, Ui.TEXT);
+        Ui.text(page, "Tools for looking into the head unit: dumps to a USB stick, leftover app data, the MICOM recorder, "
+                + "erasing /data. For when something misbehaves.", 16, false, Ui.GREY);
+        Switch sw = Ui.switchRow(page, "Show the Debug tab");
+        sw.setChecked(a.debugShown());
+        sw.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(android.widget.CompoundButton b, boolean on) {
+                a.setDebugShown(on);
+            }
+        });
     }
 
     static String read(File f) throws Exception {
