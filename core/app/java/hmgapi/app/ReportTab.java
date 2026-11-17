@@ -18,9 +18,9 @@ import android.widget.TextView;
  */
 final class ReportTab {
     final MainActivity a;
-    private TextView message, result;
+    private TextView message, result, libsMessage;
     private ImageView qr;
-    private Button go;
+    private Button go, libsGo;
     static String last;   // the last report's output, kept while the app runs
 
     ReportTab(MainActivity a) {
@@ -46,6 +46,17 @@ final class ReportTab {
         });
         message = Ui.text(list, "", 18, false, Ui.WARN);
         result = Ui.text(list, "", 18, false, Ui.TEXT);
+        Ui.text(list, "Copy CarPlay and Android Auto libraries", 22, true, Ui.TEXT);
+        Ui.text(list, "For debugging: copies the car's CarPlay, iAP2 and Android Auto libraries (and HMG-API's own) from the head "
+                + "unit to the folder \"HMG-API libs\" on the USB stick, with a list of their checksums. These are the car's own "
+                + "files: keep them to yourself or send them to a maintainer who asked, and never post them. Plug in a USB stick first.", 16, false, Ui.GREY);
+        libsGo = Ui.button(list, "Copy libraries to USB", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                copyLibs();
+            }
+        });
+        libsMessage = Ui.text(list, "", 18, false, Ui.TEXT);
         qr = new ImageView(a);
         qr.setVisibility(View.GONE);
         int px = Ui.dp(a, 380);
@@ -55,6 +66,30 @@ final class ReportTab {
         root.addView(qr, lp);
         if (last != null) show(last.substring(last.indexOf('\n') + 1), last.substring(0, last.indexOf('\n')));
         return root;
+    }
+
+    private void copyLibs() {
+        libsGo.setEnabled(false);
+        libsMessage.setText("Copying…");
+        new Ui.Job<Hmgapid.Result>() {
+            @Override
+            Hmgapid.Result work() throws Exception {
+                return Hmgapid.call(300000, "engine", "libs");
+            }
+
+            @Override
+            void done(Hmgapid.Result r, Exception e) {
+                libsGo.setEnabled(true);
+                libsGo.setText("Copy again");
+                if (e != null) {
+                    libsMessage.setText("Couldn't copy the libraries: " + e.getMessage());
+                    return;
+                }
+                StringBuilder s = new StringBuilder();
+                for (String l : r.output.split("\n")) if (l.startsWith("usb: ") || l.startsWith("libs: ")) s.append(l.replaceFirst("^(usb|libs): ", "")).append('\n');
+                libsMessage.setText(r.code == 0 ? "Done.\n" + s : "Not copied.\n" + s);
+            }
+        }.start(a);
     }
 
     private void make() {

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0-rc.5 (2026-11-16)
+
+- **Copy the car's CarPlay and Android Auto libraries to a USB stick, for debugging.** The
+  app's Car Report tab has a **Copy libraries to USB** button (`hmgapid engine libs`). It
+  copies `libCarPlay*`, `libiap2*`, `libautoreceiver*`, `libhmgapi*` and `libleafia*` from
+  `/system/lib` to `HMG-API libs/<model>-<region>-<firmware>-<time>/` on every stick, with
+  a `manifest.txt` (size and md5 of each) and, where HMG-API holds a stock backup of a
+  file, that copy in `stock/`. Hooks and recipes work in memory, so these are the files as
+  the car has them. They are the car's own files: for the owner's stick only, never for a
+  repository or a public post.
+
 ## 1.1.0-rc.4 (2026-11-16)
 
 - **The Ioniq 6 on 260903 has all 351 hook points, in Canada as well as the USA.** The

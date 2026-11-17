@@ -59,7 +59,7 @@ import java.util.TreeMap;
  * names the lpatch binary.
  */
 public final class Engine {
-    public static final String HMGAPI_VERSION = "1.1.0-rc.4";
+    public static final String HMGAPI_VERSION = "1.1.0-rc.5";
     /**
      * The release a pre-release leads to (1.1.0 for 1.1.0-rc.1): what a mod's "hmgapi"
      * range of final versions is checked against (Version.meetsHmgapi). Updates compare
@@ -259,6 +259,7 @@ public final class Engine {
         if ("verify-map".equals(cmd)) return MapCheck.run(this);
         if ("map-car".equals(cmd)) return MapProbe.run(this, args);
         if ("report".equals(cmd)) return Report.run(this, args.length > 1 && "--usb".equals(args[1]));
+        if ("libs".equals(cmd)) return LibDump.run(this);
         if ("usb-scan".equals(cmd)) return UsbUpdates.scan(this);
         if ("publish-state".equals(cmd)) return LiveState.publish(this);
         if ("apps".equals(cmd)) return ModApps.sync(this);
@@ -322,7 +323,7 @@ public final class Engine {
             if (!map.runnable) out.add("hooks are off on this car (" + map.reason + "): mods apply without their hooks");
         }
         if (!restoreAll && !"plan".equals(cmd) && !"apply".equals(cmd)) {
-            out.add("usage: engine plan | apply [--trial] | keep | restore | status | recover | firmware-reset | install <zip|dir> | remove <id> | nemesis-sync | map | map-car [--local [--if-needed] | --write | --forget] | verify-map | report [--usb] | usb-scan | update-hmgapi <zip> | publish-state | apps");
+            out.add("usage: engine plan | apply [--trial] | keep | restore | status | recover | firmware-reset | install <zip|dir> | remove <id> | nemesis-sync | map | map-car [--local [--if-needed] | --write | --forget] | verify-map | report [--usb] | libs | usb-scan | update-hmgapi <zip> | publish-state | apps");
             return 2;
         }
         Plan p = plan(restoreAll, force);
